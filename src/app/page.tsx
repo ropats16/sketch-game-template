@@ -7,19 +7,19 @@ import { useGameContext } from "@/context/GameContext";
 import { useConnection } from "arweave-wallet-kit";
 
 export default function SketchGuessApp() {
-  const { state, setState, setCurrentPlayer } = useGameContext();
+  const { mode, setMode, setCurrentPlayer } = useGameContext();
   const { connected } = useConnection();
 
   if (!connected) {
-    setState("landing");
+    setMode("landing");
     setCurrentPlayer(null);
   }
 
   return (
     <div className="flex flex-col justify-center h-full my-10">
-      {state === "landing" && <LandingPage />}
-      {state === "waiting" && <WaitingRoom />}
-      {state === "inGame" && <GameRound />}
+      {mode === "landing" && <LandingPage />}
+      {mode === "waiting" && <WaitingRoom />}
+      {(mode === "drawing" || mode === "guessing") && <GameRound />}
     </div>
   );
 }
