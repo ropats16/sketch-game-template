@@ -1,3 +1,11 @@
+-- .load-blueprint apm
+
+-- apm.update()
+
+-- apm.install("@rakis/DbAdmin")
+
+-- .load-blueprint chatroom
+
 local sqlite3 = require("lsqlite3")
 local dbAdmin = require("@rakis/DbAdmin")
 
@@ -12,7 +20,7 @@ admin:exec([[
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     score INTEGER DEFAULT 0,
-    isCreator BOOLEAN DEFAULT FALSE
+    isCreator BOOLEAN DEFAULT FALSE,
   );
 ]])
 
@@ -41,12 +49,16 @@ Handlers.add(
 )
 
 GameState = {
-    currentRound = 1, -- Is this necessary?
+    currentRound = 1,
     maxRounds = 8,
     activeDrawer = "",
     mode = "In-Waiting",
-    answeredBy = {}
+    answeredBy = {},
+    currentTimeStamp = 0
 }
+
+ChosenWord = ""
+DrawerId = 1
 
 WordList = {
     "cat", "dog", "tree", "house", "sun", "moon", "flower", "car", "train", 
@@ -62,8 +74,8 @@ Handlers.add(
     "Joined-Players",
     "Joined-Players",
     function (msg)
-        local users = admin:exec("SELECT * FROM leaderboard")
-        msg.reply({ Action = "Joined User Res", Data = users})
+        local players = admin:exec("SELECT * FROM leaderboard")
+        msg.reply({ Action = "Joined Player Res", Data = players})
     end
 )
 
@@ -89,7 +101,7 @@ Handlers.add(
         admin:apply('DELETE FROM leaderboard WHERE id = ?;', { msg.From })
         msg.reply({ Data = "Successfully unregistered from game." })
     end
-)   
+)  
 
 Handlers.add(
     "Start-Game",
@@ -106,10 +118,8 @@ Handlers.add(
             );
         ]])
 
-        DrawerId = DrawerId or 1
-
         -- Select a random player from the leaderboard to be the active drawer
-        local results = admin:exec('SELECT id, name FROM leaderboard')[DrawerId]
+        local results = admin:exec('SELECT id, name FROM leaderboard ORDER BY RANDOM() LIMIT 1;')
             
         local activeDrawerId = results[1].id
         local activeDrawer = results[1].name
@@ -170,7 +180,7 @@ Handlers.add(
     "Get-Drawing",
     function(msg)
         local results = admin:select('SELECT drawing FROM rounds WHERE id = ?;', { GameState.currentRound })
-        msg.reply({ Data = results[1].drawing })
+        msg.reply({ Data = { results[1].drawing } })
     end
 )
 
@@ -189,12 +199,13 @@ Handlers.add(
                 local correctAnswers = results[1].correct_answers
                 correctAnswers = correctAnswers .. msg.From .. ", "
                 admin:apply('UPDATE rounds SET correct_answers = ? WHERE id = ?;', { correctAnswers, GameState.currentRound })
+                admin:apply('UPDATE leaderboard SET score = score + 10 WHERE id = ?;', { msg.From })
                 msg.reply({ Data = "Correct answer!" })
             else
                 msg.reply({ Data = "Incorrect answer." })
             end
         -- Update leaderboard
-            admin:apply('UPDATE leaderboard SET score = score + 10 WHERE id = ?;', { msg.From })
+            
     end
 )
 
@@ -202,52 +213,58 @@ Handlers.add(
     "Update-Round",
     "Update-Round",
     function(msg)
-        DrawerId = DrawerId + 1
-
-        -- Find the next player in the leaderboard
-        local results = admin:exec('SELECT id, name FROM leaderboard')
-
-        local drawer = results[DrawerId]
-        if not drawer then
-            DrawerId = 1
-            drawer = results[DrawerId]
-        end
-
-        if #results == 0 then
-            msg.reply({ Data = "No more players available." })
+        if (msg.Timestamp - GameState.currentTimeStamp) < 20000 then
+            msg.reply({ Action = "Spam", Data = "Round already updated"})
             return
         end
 
-        local activeDrawerId = results[1].id
-        local activeDrawer = results[1].name
+        GameState.currentRound = GameState.currentRound + 1
 
-        local math = require("math")
+        if GameState.currentRound < GameState.maxRounds then
+            DrawerId = DrawerId + 1
 
-        local randomIndex = math.random(#WordList)
-        local chosenWord = WordList[randomIndex]
+            -- Find the next player in the leaderboard
+            local results = admin:exec('SELECT id, name FROM leaderboard')
 
-        if chosenWord ~= ChosenWord then
-            ChosenWord = chosenWord
-        else
-            randomIndex = math.random(#WordList)
-            chosenWord = WordList[randomIndex]
-            ChosenWord = chosenWord
+            local drawer = results[DrawerId]
+
+            if not drawer then
+                DrawerId = 1
+                drawer = results[DrawerId]
+            end
+
+            local activeDrawerId = results[1].id
+            local activeDrawer = results[1].name
+
+            local math = require("math")
+
+            local randomIndex = math.random(#WordList)
+            local chosenWord = WordList[randomIndex]
+
+            if chosenWord ~= ChosenWord then
+                ChosenWord = chosenWord
+            else
+                chosenWord = WordList[randomIndex + 1]
+                ChosenWord = chosenWord
+            end
+
+        -- print (activeDrawer)
+            -- print(ChosenWord)
+            
+            GameState.mode = "Drawing"
+            GameState.currentTimeStamp = msg.Timestamp
+            GameState.activeDrawer = activeDrawerId
+
+            admin:apply('INSERT INTO rounds (active_drawer, word, drawing, correct_answers) VALUES (?, ?, ?, ?);', { activeDrawerId, chosenWord, "", "" })
+            
+            -- ao.send({ Target = ao.id, Action = "Broadcast", Data = "Game-Started. "})
+            ao.send({ Target = activeDrawerId, Action = "Chosen-Word", Data = chosenWord })
+            ao.send({ Target = ao.id, Action = "Broadcast", Data = "Round-Started. Welcome to round " .. GameState.currentRound})
+            ao.send({ Target = ao.id, Action = "Broadcast", Data = "The active drawer is " .. activeDrawer .. " : " .. activeDrawerId .. ". Please wait while they finish drawing." })
+        else 
+            GameState.mode = "Completed"
+            ao.send({ Target = ao.id, Action = "Broadcast", Data = "Game Over!" }) 
         end
-
-        -- print(chosenWord)
-        
-        GameState.mode = "Drawing"
-        GameState.currentTimeStamp = msg.Timestamp
-        GameState.activeDrawer = activeDrawerId
-
-        admin:apply('INSERT INTO rounds (active_drawer, word, drawing, correct_answers) VALUES (?, ?, ?, ?);', { activeDrawerId, chosenWord, "", "" })
-
-        GameState.currentRound = admin:exec("SELECT id FROM rounds ORDER BY id DESC LIMIT 1;")[1].id
-        
-        -- ao.send({ Target = ao.id, Action = "Broadcast", Data = "Game-Started. "})
-        ao.send({ Target = activeDrawerId, Action = "Chosen-Word", Data = chosenWord })
-        ao.send({ Target = ao.id, Action = "Broadcast", Data = "Game-Started. Welcome to round " .. GameState.currentRound})
-        ao.send({ Target = ao.id, Action = "Broadcast", Data = "The active drawer is " .. activeDrawer .. " : " .. activeDrawerId .. ". Please wait while they finish drawing." })
     end
 )
 
