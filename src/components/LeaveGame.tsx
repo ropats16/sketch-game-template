@@ -9,7 +9,7 @@ import {
 } from "@permaweb/aoconnect";
 
 export default function LeaveGame() {
-  const { setState, setJoinedUsers, currentPlayer, gameProcess } =
+  const { setMode, setJoinedPlayers, currentPlayer, gameState } =
     useGameContext();
 
   const handleLeaveRoom = async () => {
@@ -21,7 +21,7 @@ export default function LeaveGame() {
       try {
         // Wait for the player registration message to be sent to the AO process
         const sendRes = await message({
-          process: gameProcess,
+          process: gameState.gameProcess,
           signer: createDataItemSigner(window.arweaveWallet),
           tags: [
             {
@@ -37,7 +37,7 @@ export default function LeaveGame() {
           // the arweave TXID of the message
           message: sendRes,
           // the arweave TXID of the process
-          process: gameProcess,
+          process: gameState.gameProcess,
         });
 
         console.dir(
@@ -51,8 +51,8 @@ export default function LeaveGame() {
             description: "You have left the room.",
           });
 
-          setJoinedUsers([]);
-          setState("landing");
+          setJoinedPlayers([]);
+          setMode("landing");
         }
       } catch (error) {
         toast({

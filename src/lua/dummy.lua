@@ -59,8 +59,8 @@ WordList = {
 }
 
 Handlers.add(
-    "Joined-Users",
-    "Joined-Users",
+    "Joined-Players",
+    "Joined-Players",
     function (msg)
         local users = admin:exec("SELECT * FROM leaderboard")
         msg.reply({ Action = "Joined User Res", Data = users})
@@ -106,33 +106,71 @@ Handlers.add(
             );
         ]])
 
+        DrawerId = DrawerId or 1
+
         -- Select a random player from the leaderboard to be the active drawer
-        local results = admin:exec('SELECT id, name FROM leaderboard ORDER BY RANDOM() LIMIT 1;')
+        local results = admin:exec('SELECT id, name FROM leaderboard')[DrawerId]
             
         local activeDrawerId = results[1].id
         local activeDrawer = results[1].name
 
+        local math = require("math")
+
         local randomIndex = math.random(#WordList)
-        local chosenWord = words[randomIndex]
+        local chosenWord = WordList[randomIndex]
+        ChosenWord = chosenWord
+
+        -- print(chosenWord)
         
-        GameState.mode = "Playing"
+        GameState.mode = "Drawing"
         GameState.currentTimeStamp = msg.Timestamp
         GameState.activeDrawer = activeDrawerId
 
-        admin:apply('INSERT INTO leaderboard (active_drawer, word, drawing, correct_answers) VALUES (?, ?, ?, ?);', { activeDrawerId, chosenWord, "", "" })
+        admin:apply('INSERT INTO rounds (active_drawer, word, drawing, correct_answers) VALUES (?, ?, ?, ?);', { activeDrawerId, chosenWord, "", "" })
 
         GameState.currentRound = admin:exec("SELECT id FROM rounds ORDER BY id DESC LIMIT 1;")[1].id
         
-        ao.send({ Target = ao.id, Action = "Broadcast", Data = "Game-Started. Welcome to " .. GameState.currentRound})
+        -- ao.send({ Target = ao.id, Action = "Broadcast", Data = "Game-Started. "})
+        ao.send({ Target = activeDrawerId, Action = "Chosen-Word", Data = chosenWord })
+        ao.send({ Target = ao.id, Action = "Broadcast", Data = "Game-Started. Welcome to round " .. GameState.currentRound})
         ao.send({ Target = ao.id, Action = "Broadcast", Data = "The active drawer is " .. activeDrawer .. " : " .. activeDrawerId .. ". Please wait while they finish drawing." })
     end
 )
 
 Handlers.add(
-    "Submit Drawing",
-    "Submit Drawing",
+    "Game-State",
+    "Game-State",
+    function (msg)
+        msg.reply({ Action = "Current Game State", Data = GameState})
+    end
+)
+
+Handlers.add(
+    "Chosen-Word",
+    "Chosen-Word",
+    function(msg)
+        msg.reply({ Action = "Chosen-Word", Data = ChosenWord })
+    end
+)
+
+Handlers.add(
+    "Submit-Drawing",
+    "Submit-Drawing",
     function(msg)
         -- Submit drawing
+        -- ao.send({ Target = ao.id, Data = msg.Data})
+        admin:apply('UPDATE rounds SET drawing = ? WHERE id = ?;', { msg.Data, GameState.currentRound })
+        GameState.mode = "Guessing"
+        msg.reply({ Data = "Drawing submitted successfully." })
+    end
+)
+
+Handlers.add(
+    "Get-Drawing",
+    "Get-Drawing",
+    function(msg)
+        local results = admin:select('SELECT drawing FROM rounds WHERE id = ?;', { GameState.currentRound })
+        msg.reply({ Data = results[1].drawing })
     end
 )
 
@@ -141,8 +179,75 @@ Handlers.add(
     "Submit-Answer",
     function(msg)
         -- Submit answer
+            local results = admin:select('SELECT word FROM rounds WHERE id = ?;', { GameState.currentRound })
+            local correctAnswer = results[1].word
+            local submittedAnswer = msg.Data
 
+            if submittedAnswer == correctAnswer then
+                -- Update correct answers
+                local results = admin:select('SELECT correct_answers FROM rounds WHERE id = ?;', { GameState.currentRound })
+                local correctAnswers = results[1].correct_answers
+                correctAnswers = correctAnswers .. msg.From .. ", "
+                admin:apply('UPDATE rounds SET correct_answers = ? WHERE id = ?;', { correctAnswers, GameState.currentRound })
+                msg.reply({ Data = "Correct answer!" })
+            else
+                msg.reply({ Data = "Incorrect answer." })
+            end
         -- Update leaderboard
+            admin:apply('UPDATE leaderboard SET score = score + 10 WHERE id = ?;', { msg.From })
+    end
+)
+
+Handlers.add(
+    "Update-Round",
+    "Update-Round",
+    function(msg)
+        DrawerId = DrawerId + 1
+
+        -- Find the next player in the leaderboard
+        local results = admin:exec('SELECT id, name FROM leaderboard')
+
+        local drawer = results[DrawerId]
+        if not drawer then
+            DrawerId = 1
+            drawer = results[DrawerId]
+        end
+
+        if #results == 0 then
+            msg.reply({ Data = "No more players available." })
+            return
+        end
+
+        local activeDrawerId = results[1].id
+        local activeDrawer = results[1].name
+
+        local math = require("math")
+
+        local randomIndex = math.random(#WordList)
+        local chosenWord = WordList[randomIndex]
+
+        if chosenWord ~= ChosenWord then
+            ChosenWord = chosenWord
+        else
+            randomIndex = math.random(#WordList)
+            chosenWord = WordList[randomIndex]
+            ChosenWord = chosenWord
+        end
+
+        -- print(chosenWord)
+        
+        GameState.mode = "Drawing"
+        GameState.currentTimeStamp = msg.Timestamp
+        GameState.activeDrawer = activeDrawerId
+
+        admin:apply('INSERT INTO rounds (active_drawer, word, drawing, correct_answers) VALUES (?, ?, ?, ?);', { activeDrawerId, chosenWord, "", "" })
+
+        GameState.currentRound = admin:exec("SELECT id FROM rounds ORDER BY id DESC LIMIT 1;")[1].id
+        
+        -- ao.send({ Target = ao.id, Action = "Broadcast", Data = "Game-Started. "})
+        ao.send({ Target = activeDrawerId, Action = "Chosen-Word", Data = chosenWord })
+        ao.send({ Target = ao.id, Action = "Broadcast", Data = "Game-Started. Welcome to round " .. GameState.currentRound})
+        ao.send({ Target = ao.id, Action = "Broadcast", Data = "The active drawer is " .. activeDrawer .. " : " .. activeDrawerId .. ". Please wait while they finish drawing." })
     end
 )
 

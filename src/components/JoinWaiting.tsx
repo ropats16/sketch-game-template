@@ -1,15 +1,10 @@
 import { useGameContext } from "@/context/GameContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import {
-  createDataItemSigner,
-  dryrun,
-  message,
-  result,
-} from "@permaweb/aoconnect";
+import { dryrunResult, messageResult } from "@/lib/utils";
 
 export default function JoinWaiting() {
-  const { setState, setJoinedUsers, currentPlayer, gameProcess } =
+  const { setMode, setJoinedPlayers, currentPlayer, gameState } =
     useGameContext();
 
   const handlePlayNow = async () => {
@@ -18,83 +13,58 @@ export default function JoinWaiting() {
     if (currentPlayer) {
       console.log("Current player:", currentPlayer);
 
-      try {
-        // Wait for the player registration message to be sent to the AO process
-        const sendRes = await message({
-          process: gameProcess,
-          signer: createDataItemSigner(window.arweaveWallet),
-          tags: [
-            {
-              name: "Action",
-              value: "Register-Player",
-            },
-            {
-              name: "DisplayName",
-              value: currentPlayer.name,
-            },
-          ],
-        });
+      // Wait for the player registration message to be sent to the AO process
+      let { Messages, Spawns, Output, Error } = await messageResult(
+        gameState.gameProcess,
+        [
+          {
+            name: "Action",
+            value: "Register-Player",
+          },
+          {
+            name: "DisplayName",
+            value: currentPlayer.name,
+          },
+        ]
+      );
 
-        console.log("Register player result", sendRes);
-
-        let { Messages, Spawns, Output, Error } = await result({
-          // the arweave TXID of the message
-          message: sendRes,
-          // the arweave TXID of the process
-          process: gameProcess,
-        });
-
-        console.dir(
-          { Messages, Spawns, Output, Error },
-          { depth: Infinity, colors: true }
-        );
-
-        if (Messages[0].Data === "Successfully registered to game.") {
-          toast({
-            title: "Successfully registered.",
-            description: "Waiting for other players to join.",
-          });
-
-          //   setJoinedUsers([...joinedUsers, currentPlayer]);
-          setState("waiting");
-        } else if (Messages[0].Data === "You are already registered.") {
-          toast({
-            title: "Player already registered.",
-            description: "Please wait for other players to join.",
-          });
-
-          //   setJoinedUsers([...joinedUsers, currentPlayer]);
-        } else return;
-
-        const userRes = await dryrun({
-          process: gameProcess,
-          tags: [
-            {
-              name: "Action",
-              value: "Joined-Users",
-            },
-          ],
-        }).then((res) => JSON.parse(res.Messages[0].Data));
-
-        console.log("Joined users result", userRes);
-        if (
-          userRes.some(
-            (user: { id: string; isCreator: number }) =>
-              user.id === currentPlayer.id && user.isCreator === 1
-          )
-        ) {
-          currentPlayer.isCreator = true;
-        }
-        setJoinedUsers(userRes);
-        setTimeout(() => {
-          setState("waiting");
-        }, 1000);
-      } catch (error) {
+      if (Messages[0].Data === "Successfully registered to game.") {
         toast({
-          title: "An error occurred while registering.",
-          description: "Please try again.",
+          title: "Successfully registered.",
+          description: "Waiting for other players to join.",
         });
+
+        //   setJoinedPlayers([...joinedPlayers, currentPlayer]);
+        setMode("waiting");
+      } else if (Messages[0].Data === "You are already registered.") {
+        toast({
+          title: "Player already registered.",
+          description: "Please wait for other players to join.",
+        });
+
+        //   setJoinedPlayers([...joinedPlayers, currentPlayer]);
+      } else return;
+
+      const userRes = await dryrunResult(gameState.gameProcess, [
+        {
+          name: "Action",
+          value: "Joined-Players",
+        },
+      ]);
+
+      console.log("Joined users result", userRes);
+      if (
+        userRes.some(
+          (user: { id: string; isCreator: number }) =>
+            user.id === currentPlayer.id && user.isCreator === 1
+        )
+      ) {
+        currentPlayer.isCreator = true;
       }
+      setJoinedPlayers(userRes);
+      setTimeout(() => {
+        setMode("waiting");
+      }, 1000);
     } else {
       toast({
         title: "Please login to play.",
