@@ -6,7 +6,7 @@ import { useGameContext } from "@/context/GameContext";
 import LeaveGame from "./LeaveGame";
 import { useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
-import { dryrunResult } from "@/lib/utils";
+import { dryrunResult, messageResult } from "@/lib/utils";
 
 const pastelColors = [
   "bg-red-200",
@@ -35,9 +35,18 @@ export default function WaitingRoom() {
     return null;
   }
 
-  const handleStartGame = () => {
+  const handleStartGame = async () => {
     if (joinedPlayers.length >= 2) {
-      setMode("drawing");
+      const { Messages, Output, Spawns, Error } = await messageResult(
+        gameState.gameProcess,
+        [
+          {
+            name: "Action",
+            value: "Start-Game",
+          },
+        ]
+      );
+      // setMode("drawing");
     }
   };
 
