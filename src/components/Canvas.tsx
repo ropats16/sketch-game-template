@@ -11,7 +11,7 @@ interface CanvasProps {
 }
 
 const Canvas: FC<CanvasProps> = ({ timeLeft }) => {
-  const { gameState } = useGameContext();
+  const { gameState, setMode } = useGameContext();
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
 
   const handleSubmitDrawing = async () => {
@@ -70,6 +70,8 @@ const Canvas: FC<CanvasProps> = ({ timeLeft }) => {
       ],
       URL
     );
+
+    setMode("guessing");
   };
 
   useEffect(() => {
