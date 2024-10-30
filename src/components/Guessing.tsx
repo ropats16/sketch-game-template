@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 export default function Guessing() {
-  const { gameState, currentPlayer, setMode, mode } = useGameContext();
+  const { gameState, setGamestate, currentPlayer, setMode, mode } =
+    useGameContext();
   const [drawing, setDrawing] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(60);
   const [guess, setGuess] = useState("");
@@ -52,6 +53,12 @@ export default function Guessing() {
       toast({
         title: "Next round started.",
         description: "You are being redirected to the drawing page.",
+      });
+      setGamestate({
+        ...gameState,
+        currentTimestamp: GameState.currentTimeStamp,
+        currentRound: GameState.currentRound,
+        activeDrawer: GameState.activeDrawer,
       });
       setMode("drawing");
     }
@@ -99,10 +106,10 @@ export default function Guessing() {
 
     console.log("Round updated result", Messages);
 
-    // if (Messages[0].Data === "Round updated successfully.") {
-    //   console.log("Round updated successfully.");
-    //   setMode("drawing");
-    // }
+    if (Messages[0].Data === "Round updated successfully.") {
+      console.log("Round updated successfully.");
+      setMode("drawing");
+    }
   };
 
   useEffect(() => {
