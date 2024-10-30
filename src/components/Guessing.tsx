@@ -153,7 +153,7 @@ export default function Guessing() {
                   src={drawing}
                   alt="Image"
                   layout="fill"
-                  className="rounded-md object-cover"
+                  className="rounded-md object-contain"
                   loader={imageLoader}
                 />
               </AspectRatio>
