@@ -33,7 +33,7 @@ export default function LeaveGame() {
 
         console.log("Register player result", sendRes);
 
-        let { Messages, Spawns, Output, Error } = await result({
+        const { Messages, Spawns, Output, Error } = await result({
           // the arweave TXID of the message
           message: sendRes,
           // the arweave TXID of the process

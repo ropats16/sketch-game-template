@@ -14,7 +14,7 @@ export default function JoinWaiting() {
       console.log("Current player:", currentPlayer);
 
       // Wait for the player registration message to be sent to the AO process
-      let { Messages, Spawns, Output, Error } = await messageResult(
+      const { Messages, Spawns, Output, Error } = await messageResult(
         gameState.gameProcess,
         [
           {

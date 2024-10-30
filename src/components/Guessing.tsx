@@ -59,7 +59,7 @@ export default function Guessing() {
 
   const handleSubmit = async () => {
     console.log("Submitting guess", guess);
-    let { Messages, Spawns, Output, Error } = await messageResult(
+    const { Messages, Spawns, Output, Error } = await messageResult(
       gameState.gameProcess,
       [
         {
@@ -87,7 +87,7 @@ export default function Guessing() {
 
   const updateRound = async () => {
     console.log("Updating round");
-    let { Messages, Spawns, Output, Error } = await messageResult(
+    const { Messages, Spawns, Output, Error } = await messageResult(
       gameState.gameProcess,
       [
         {

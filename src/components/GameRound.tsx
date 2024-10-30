@@ -10,9 +10,9 @@ import Guessing from "./Guessing";
 
 export default function GameRound() {
   const { mode, gameState, joinedPlayers, setJoinedPlayers } = useGameContext();
-  const [chatMessages, setChatMessages] = useState<
-    { playerId: number; message: string }[]
-  >([]);
+  // const [chatMessages, setChatMessages] = useState<
+  //   { playerId: number; message: string }[]
+  // >([]);
 
   const userRes = async () => {
     const updatedPlayers = await dryrunResult(gameState.gameProcess, [

@@ -1,12 +1,11 @@
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGameContext } from "@/context/GameContext";
 import {
   Pencil,
-  MessageCircle,
+  //   MessageCircle,
   Trophy,
-  ChevronLeft,
-  ChevronRight,
+  //   ChevronLeft,
+  //   ChevronRight,
 } from "lucide-react";
 
 export default function Sidebar() {

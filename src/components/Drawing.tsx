@@ -5,16 +5,8 @@ import Canvas from "./Canvas";
 import { toast } from "@/hooks/use-toast";
 
 export default function Drawing() {
-  const {
-    joinedPlayers,
-    gameState,
-    setGamestate,
-    currentPlayer,
-    setChosenWord,
-    chosenWord,
-    setMode,
-    mode,
-  } = useGameContext();
+  const { gameState, currentPlayer, setChosenWord, chosenWord, setMode, mode } =
+    useGameContext();
 
   const [timeLeft, setTimeLeft] = useState(60);
 
@@ -40,7 +32,7 @@ export default function Drawing() {
   const fetchChosenWord = async () => {
     console.log("Fetching chosen word");
     // Wait for the player registration message to be sent to the AO process
-    let { Messages, Spawns, Output, Error } = await messageResult(
+    const { Messages, Spawns, Output, Error } = await messageResult(
       gameState.gameProcess,
       [
         {

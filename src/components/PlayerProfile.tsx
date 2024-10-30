@@ -6,7 +6,7 @@ import { useActiveAddress, useConnection } from "arweave-wallet-kit";
 import { useEffect } from "react";
 
 export default function PlayerProfile() {
-  const { currentPlayer, setCurrentPlayer, joinedPlayers } = useGameContext();
+  const { currentPlayer, setCurrentPlayer } = useGameContext();
 
   const activeAddress = useActiveAddress();
   const { connected } = useConnection();

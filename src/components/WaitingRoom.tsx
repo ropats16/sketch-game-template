@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { UserCircle2, Copy, Users } from "lucide-react";
 import { useGameContext } from "@/context/GameContext";
 import LeaveGame from "./LeaveGame";
-import { use, useEffect } from "react";
-import { dryrun } from "@permaweb/aoconnect";
+import { useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { dryrunResult } from "@/lib/utils";
 
@@ -28,7 +27,6 @@ export default function WaitingRoom() {
     setMode,
     gameState,
     setGamestate,
-    mode,
   } = useGameContext();
   const maxPlayers = 8;
 

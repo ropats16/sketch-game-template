@@ -1,9 +1,5 @@
-import { useState, FC, use, useEffect } from "react";
-import {
-  Excalidraw,
-  exportToCanvas,
-  exportToSvg,
-} from "@excalidraw/excalidraw";
+import { useState, FC, useEffect } from "react";
+import { Excalidraw, exportToSvg } from "@excalidraw/excalidraw";
 import { useGameContext } from "@/context/GameContext";
 import { DataItem } from "arbundles";
 import { messageResult } from "@/lib/utils";
